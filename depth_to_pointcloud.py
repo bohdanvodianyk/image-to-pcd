@@ -59,8 +59,8 @@ print("Translation Vectors:")
 print(T_vecs)
 
 NYU_DATA = False
-FINAL_HEIGHT = 256
-FINAL_WIDTH = 256
+FINAL_HEIGHT = 2048
+FINAL_WIDTH = 2048
 INPUT_DIR = './my_test/input'
 OUTPUT_DIR = './my_test/output'
 DATASET = 'nyu' #Lets not pick a fight with the model's dataloader
@@ -74,6 +74,8 @@ def process_images(model):
         try:
             color_image = Image.open(image_path).convert('RGB')
             original_width, original_height = color_image.size
+            FINAL_HEIGHT = original_height
+            FINAL_WIDTH = original_width
             image_tensor = transforms.ToTensor()(color_image).unsqueeze(0).to('cuda' if torch.cuda.is_available() else 'cpu')
 
             pred = model(image_tensor, dataset=DATASET)
@@ -98,6 +100,7 @@ def process_images(model):
             pcd = o3d.geometry.PointCloud()
             pcd.points = o3d.utility.Vector3dVector(points)
             pcd.colors = o3d.utility.Vector3dVector(colors)
+            # pcd = pcd.voxel_down_sample(voxel_size=0.01)
             o3d.io.write_point_cloud(os.path.join(OUTPUT_DIR, os.path.splitext(os.path.basename(image_path))[0] + ".ply"), pcd)
         except Exception as e:
             print(f"Error processing {image_path}: {e}")
