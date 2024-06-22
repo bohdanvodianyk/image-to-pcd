@@ -1,8 +1,3 @@
-# Born out of Issue 36. 
-# Allows  the user to set up own test files to infer on (Create a folder my_test and add subfolder input and output in the metric_depth directory before running this script.)
-# Make sure you have the necessary libraries
-# Code by @1ssb
-
 import argparse
 import os
 import glob
@@ -14,11 +9,6 @@ import open3d as o3d
 from tqdm import tqdm
 from zoedepth.models.builder import build_model
 from zoedepth.utils.config import get_config
-
-# Global settings
-# FL = 715.0873
-# FY = 256 * 0.6
-# FX = 256 * 0.6
 
 # Load the saved calibration parameters
 calibration_data = np.load("CalibrationMatrix_college_cpt.npz")
@@ -41,29 +31,12 @@ print(f"FX: {FX}")
 print(f"FY: {FY}")
 print(f"FL (average focal length): {FL}")
 
-# Optionally, you can extract other parameters if needed
-dist_coeff = calibration_data['distCoeff']
-R_vecs = calibration_data['RotationalV']
-T_vecs = calibration_data['TranslationV']
-
-# Print distortion coefficients
-print("Distortion Coefficients:")
-print(dist_coeff)
-
-# Print rotational vectors
-print("Rotational Vectors:")
-print(R_vecs)
-
-# Print translation vectors
-print("Translation Vectors:")
-print(T_vecs)
-
 NYU_DATA = False
-FINAL_HEIGHT = 2048
-FINAL_WIDTH = 2048
-INPUT_DIR = './my_test/input'
-OUTPUT_DIR = './my_test/output'
-DATASET = 'nyu' #Lets not pick a fight with the model's dataloader
+INPUT_DIR = './my_test/input/indoor'
+OUTPUT_DIR = './my_test/output/indoor/'
+DATASET = 'nyu'  # For INDOOR
+# DATASET = 'kitti'  # For OUTDOOR
+
 
 def process_images(model):
     if not os.path.exists(OUTPUT_DIR):
@@ -76,7 +49,8 @@ def process_images(model):
             original_width, original_height = color_image.size
             FINAL_HEIGHT = original_height
             FINAL_WIDTH = original_width
-            image_tensor = transforms.ToTensor()(color_image).unsqueeze(0).to('cuda' if torch.cuda.is_available() else 'cpu')
+            image_tensor = transforms.ToTensor()(color_image).unsqueeze(0).to(
+                'cuda' if torch.cuda.is_available() else 'cpu')
 
             pred = model(image_tensor, dataset=DATASET)
             if isinstance(pred, dict):
@@ -100,10 +74,12 @@ def process_images(model):
             pcd = o3d.geometry.PointCloud()
             pcd.points = o3d.utility.Vector3dVector(points)
             pcd.colors = o3d.utility.Vector3dVector(colors)
-            # pcd = pcd.voxel_down_sample(voxel_size=0.01)
-            o3d.io.write_point_cloud(os.path.join(OUTPUT_DIR, os.path.splitext(os.path.basename(image_path))[0] + ".ply"), pcd)
+            pcd = pcd.voxel_down_sample(voxel_size=0.01)
+            o3d.io.write_point_cloud(
+                os.path.join(OUTPUT_DIR, os.path.splitext(os.path.basename(image_path))[0] + ".ply"), pcd)
         except Exception as e:
             print(f"Error processing {image_path}: {e}")
+
 
 def main(model_name, pretrained_resource):
     config = get_config(model_name, "eval", DATASET)
@@ -112,10 +88,9 @@ def main(model_name, pretrained_resource):
     model.eval()
     process_images(model)
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-m", "--model", type=str, default='zoedepth', help="Name of the model to test")
-    parser.add_argument("-p", "--pretrained_resource", type=str, default='local::./checkpoints/depth_anything_metric_depth_indoor.pt', help="Pretrained resource to use for fetching weights.")
 
-    args = parser.parse_args()
-    main(args.model, args.pretrained_resource)
+if __name__ == '__main__':
+    model = 'zoedepth'
+    pretrained_resource = 'local::./checkpoints/depth_anything_metric_depth_indoor.pt'
+    # pretrained_resource = 'local::./checkpoints/depth_anything_metric_depth_outdoor.pt'
+    main(model, pretrained_resource)

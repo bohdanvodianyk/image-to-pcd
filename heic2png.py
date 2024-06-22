@@ -6,7 +6,7 @@ from pillow_heif import register_heif_opener
 register_heif_opener()
 
 # Path to the directory containing HEIC images
-directory_path = 'my_test/input/'
+directory_path = 'my_test/input/indoor'
 
 # Loop through all files in the directory
 for filename in os.listdir(directory_path):
