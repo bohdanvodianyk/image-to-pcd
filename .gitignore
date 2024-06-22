@@ -1,0 +1,5 @@
+.idea/
+*.pt
+*.pth
+*.png
+*.ply
